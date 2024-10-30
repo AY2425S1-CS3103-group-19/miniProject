@@ -1,10 +1,10 @@
 // JS Websocket Client
 
-const audioSampleRate = 44100;
+const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
 const pttButton = document.getElementById("pushToTalkButton");
 
-let socket = new WebSocket("ws://localhost:8765");
+let socket = new WebSocket("ws://127.0.0.1:8765");
 let isAllowedToSpeak = false;
 let audioContext, mediaStream, audioProcessor;
 
@@ -54,9 +54,18 @@ socket.onmessage = (event) => {
     Note: `createScriptProcessor()` and the `onaudioprocess` are deprecated.
     It is recommended to use `AudioWorklet` instead for lower latency and more efficient processing.
 */
-navigator.mediaDevices.getUserMedia({ audio: { sampleRate: audioSampleRate } }).then(stream => { 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: audioSampleRate });
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { 
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
+    const client_sample_rate = audioContext.sampleRate;
+
+    if (client_sample_rate !== defaultSampleRate) {
+        const msg = JSON.stringify({ type: "send_sample_rate", sample_rate: client_sample_rate });
+        socket.send(msg);
+        console.log("Send client sample rate");
+        console.log(client_sample_rate);
+    }
+
     // Captures audio from the user's microphone for processing
     mediaStream = audioContext.createMediaStreamSource(stream);
 

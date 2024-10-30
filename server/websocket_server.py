@@ -4,12 +4,20 @@ import asyncio
 import websockets
 import pyaudio
 import json
+import numpy as np
+from scipy.signal import resample
+import time
+
+default_sample_rate = 48000
 
 # Setup PyAudio for real-time audio playback
 auido = pyaudio.PyAudio()
 
 # Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
-stream = auido.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True)
+stream = auido.open(format=pyaudio.paInt16, 
+                    channels=1, 
+                    rate=default_sample_rate, 
+                    output=True)
 
 # Track the current active speaker
 active_speaker = None 
@@ -26,32 +34,41 @@ lock = asyncio.Lock()
 Handle each of the WebSocket connections
 """
 async def handle_client(websocket, path):
+    global stream
+    
     client_id = id(websocket)
     clients[client_id] = websocket
-    print(f"Client {client_id} connected.")
+    print(f"Client {client_id} connected")
     
     try:
         await process_client_messages(websocket, client_id)
+    
     except Exception as e:
         print(f"Error managing client {client_id}: {e}")
+        await remove_client(client_id)
 
+        if (stream.is_stopped):
+            stream = auido.open(format=pyaudio.paInt16, 
+                                channels=1, 
+                                rate=default_sample_rate, 
+                                output=True)
+            print("Reset Stream")
 
 """
 Process all incoming messages from a client
 """
 async def process_client_messages(websocket, client_id):
     global active_speaker
+    client_sample_rate = default_sample_rate
 
     try:
         async for message in websocket:
-            #print(f"Received message: {message}\n")
-
             # Check if the message is audio (bytes) or JSON control message
             if isinstance(message, bytes):
                 if active_speaker == client_id:
-                    #print("Play audio\n")
-                    stream.write(message) # Play the audio
+                    await play_audio(message, client_sample_rate)
             else:
+                #print(f"Received message: {message}\n")
                 try:
                     # Parse JSON control messages
                     control_message = json.loads(message)
@@ -61,13 +78,35 @@ async def process_client_messages(websocket, client_id):
                         
                     elif control_message["type"] == "release_speaker" and active_speaker == client_id:
                         await handle_release_speaker(client_id)
-                
+
+                    elif control_message["type"] == "send_sample_rate":
+                        client_sample_rate = control_message["sample_rate"]
+                        print(f"Client {client_id} sample rate is {client_sample_rate}")
+
                 except ValueError: 
                     print(f"Received Invalid message: {message}\n")
 
     except websockets.exceptions.ConnectionClosed:
         print(f"Client {client_id} disconnected")
         await remove_client(client_id)
+
+
+"""
+Play the received audio and perform necessary resampling 
+to match the default_sample_rate
+"""
+async def play_audio(message, client_sample_rate):
+    global default_sample_rate
+
+    if client_sample_rate != default_sample_rate:
+        audio_data = np.frombuffer(message, dtype=np.int16)
+
+        num_samples = int(len(audio_data) * default_sample_rate / client_sample_rate)
+        audio_data = resample(audio_data, num_samples).astype(np.int16)
+
+        stream.write(audio_data.tobytes())
+    else:
+        stream.write(message)
 
 
 """
@@ -81,10 +120,10 @@ async def handle_request_to_speaker(websocket, client_id):
         if active_speaker is None or active_speaker == client_id:
             active_speaker = client_id
             await websocket.send("speak_granted")
-            print(f"Client {client_id} granted permission to speak.")
+            print(f"Client {client_id} granted permission to speak")
         else:
             await websocket.send("speak_denied")
-            print(f"Client {client_id} denied from speaking.")
+            print(f"Client {client_id} denied from speaking")
 
 
 """
@@ -96,7 +135,7 @@ async def handle_release_speaker(client_id):
     async with lock:
         if active_speaker == client_id:
             active_speaker = None
-            print(f"Client {client_id} released the speaker.")
+            print(f"Client {client_id} released the speaker")
             await notify_all_clients()
 
 
@@ -109,7 +148,7 @@ async def remove_client(client_id):
     if client_id in clients:
         del clients[client_id]
     
-    print(f"Client {client_id} removed.")
+    print(f"Client {client_id} removed")
 
     if active_speaker == client_id:
         await handle_release_speaker(client_id)
