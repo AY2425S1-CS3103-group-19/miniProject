@@ -1,5 +1,6 @@
 // JS Websocket Client
 
+let mediaRecorder;
 let audioContext;
 let socket = new WebSocket("ws://localhost:8765");
 const statusElement = document.getElementById("status");
@@ -9,7 +10,7 @@ let isAllowedToSpeak = false;
 socket.onopen = () => {
     console.log("WebSocket connection opened.");
     pttButton.disabled = false;
-    statusElement.innerText = "Status: Connected";
+    statusElement.innerText = "Status: Connected. You can now speak.";
 };
 
 socket.onclose = () => {
@@ -26,23 +27,31 @@ socket.onerror = () => {
 socket.onmessage = (event) => {
     const message = event.data;
 
-    if (message === "allow_speak") {
+    if (message === "speak_granted") {
         isAllowedToSpeak = true;
         pttButton.disabled = false;
-        statusElement.innerText = "Status: You can now speak.";
-    } else {
+        statusElement.innerText = "Status: Speaking...";
+        mediaRecorder.start(1);
+        console.log("Recording audio.");
+    } else if (message === "speak_denied") {
         isAllowedToSpeak = false;
         pttButton.disabled = true;
         statusElement.innerText = "Status: Another student is speaking.";
+    } else if (message === "speak_released") {
+        isAllowedToSpeak = true;
+        pttButton.disabled = false;
+        statusElement.innerText = "Status: Connected. You can now speak.";
     }
 };
 
 // Capture microphone input
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    let mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder = new MediaRecorder(stream);
+
     mediaRecorder.ondataavailable = (event) => {
         if (isAllowedToSpeak) {
             socket.send(event.data);  // Send the audio data to the server
+            console.log("Send audio");
         }
     };
     
@@ -57,15 +66,20 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             });
         }
         
-        if (isAllowedToSpeak) {
-            mediaRecorder.start();
-            statusElement.innerText = "Status: Speaking...";
-        }
+        const requestMessage = JSON.stringify({ type: "request_speaker" });
+        socket.send(requestMessage);
+        console.log("Sent request to speak");
     });
 
     // Stop recording when button is released
     document.getElementById('pushToTalkButton').addEventListener('mouseup', () => {
+        mediaRecorder.requestData();
         mediaRecorder.stop();
-        statusElement.innerText = "Status: Connected";
+
+        setTimeout(() => {
+            const releaseMessage = JSON.stringify({ type: "release_speaker" });
+            socket.send(releaseMessage);  // Notify server of release
+            console.log("Sent release speaker message.");
+        }, 500);  // 500ms delay to ensure all chunks are sent
     });
 });
