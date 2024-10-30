@@ -7,7 +7,9 @@ import json
 
 # Setup PyAudio for real-time audio playback
 auido = pyaudio.PyAudio()
-stream = auido.open(format=pyaudio.paInt16, channels=1, rate=16000, output=True)
+
+# Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
+stream = auido.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True)
 
 # Track the current active speaker
 active_speaker = None 
@@ -27,7 +29,7 @@ async def handle_client(websocket, path):
     client_id = id(websocket)
     clients[client_id] = websocket
     print(f"Client {client_id} connected.")
-
+    
     try:
         await process_client_messages(websocket, client_id)
     except Exception as e:
@@ -42,12 +44,12 @@ async def process_client_messages(websocket, client_id):
 
     try:
         async for message in websocket:
-            print(f"Received message: {message}\n")
+            #print(f"Received message: {message}\n")
 
             # Check if the message is audio (bytes) or JSON control message
             if isinstance(message, bytes):
                 if active_speaker == client_id:
-                    print("Play audio\n")
+                    #print("Play audio\n")
                     stream.write(message) # Play the audio
             else:
                 try:
@@ -75,7 +77,8 @@ async def handle_request_to_speaker(websocket, client_id):
     global active_speaker
 
     async with lock:
-        if active_speaker is None:
+        # Speaker is only granted if active speaker is un-assigned or is the current client
+        if active_speaker is None or active_speaker == client_id:
             active_speaker = client_id
             await websocket.send("speak_granted")
             print(f"Client {client_id} granted permission to speak.")
@@ -93,27 +96,39 @@ async def handle_release_speaker(client_id):
     async with lock:
         if active_speaker == client_id:
             active_speaker = None
-            await notify_all_client()
             print(f"Client {client_id} released the speaker.")
+            await notify_all_clients()
 
 
 """
 Remove a client from the conneced clients list
 """
 async def remove_client(client_id):
+    global active_speaker
+    
     if client_id in clients:
         del clients[client_id]
     
+    print(f"Client {client_id} removed.")
+
     if active_speaker == client_id:
         await handle_release_speaker(client_id)
-
+    
 
 """
 Send a message to all connected clients to tell them the speaker is available
 """
-async def notify_all_client():
-    for websocket in clients.values():
-        await websocket.send("speak_released")
+async def notify_all_clients():
+    clients_copy = clients.copy()
+    for (client_id, websocket) in clients_copy.items():
+        try:
+            await websocket.send("speak_released")
+        except websockets.exceptions.ConnectionClosed:
+            # The client has closed the connection so can remove it
+            await remove_client(client_id)
+    
+    print(f"Notified all clients that speaker is available")
+
 
 
 # Start WebSocket server
