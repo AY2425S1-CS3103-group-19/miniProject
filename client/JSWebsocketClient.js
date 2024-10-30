@@ -1,7 +1,7 @@
 // JS Websocket Client
 
 let mediaRecorder;
-let audioContext;
+let audioContext; // Cannot create the audio context here
 let socket = new WebSocket("ws://localhost:8765");
 const statusElement = document.getElementById("status");
 const pttButton = document.getElementById("pushToTalkButton");
@@ -31,12 +31,16 @@ socket.onmessage = (event) => {
         isAllowedToSpeak = true;
         pttButton.disabled = false;
         statusElement.innerText = "Status: Speaking...";
-        mediaRecorder.start(1);
+
+        // Start recording with timeslice to send data periodically
+        mediaRecorder.start(100); // Capture and send audio in 100ms chunks 
         console.log("Recording audio.");
+
     } else if (message === "speak_denied") {
         isAllowedToSpeak = false;
         pttButton.disabled = true;
         statusElement.innerText = "Status: Another student is speaking.";
+
     } else if (message === "speak_released") {
         isAllowedToSpeak = true;
         pttButton.disabled = false;
@@ -57,6 +61,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     
     // Start recording when button is pressed
     document.getElementById('pushToTalkButton').addEventListener('mousedown', () => {
+        // Create the audio context after button is pressed
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             console.log("AudioContext created.");
@@ -66,8 +71,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             });
         }
         
+        // Send speaker request to the server
         const requestMessage = JSON.stringify({ type: "request_speaker" });
-        socket.send(requestMessage);
+        socket.send(requestMessage); 
         console.log("Sent request to speak");
     });
 
@@ -76,10 +82,12 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         mediaRecorder.requestData();
         mediaRecorder.stop();
 
+        // Set delay to ensure all chunks are sent
         setTimeout(() => {
+            // Notify server to release speaker
             const releaseMessage = JSON.stringify({ type: "release_speaker" });
-            socket.send(releaseMessage);  // Notify server of release
+            socket.send(releaseMessage);  
             console.log("Sent release speaker message.");
-        }, 500);  // 500ms delay to ensure all chunks are sent
+        }, 500);  
     });
 });

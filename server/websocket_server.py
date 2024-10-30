@@ -9,11 +9,20 @@ import json
 auido = pyaudio.PyAudio()
 stream = auido.open(format=pyaudio.paInt16, channels=1, rate=16000, output=True)
 
-active_speaker = None
-clients = {}
+# Track the current active speaker
+active_speaker = None 
+
+# Store connected clients and their WebSocket objects.
+# Format: {client_id : websocket_object}
+clients = {} 
+
+# Mutex to manage access to active_speaker
 lock = asyncio.Lock()
 
-# Handle the WebSocket connection
+
+"""
+Handle each of the WebSocket connections
+"""
 async def handle_client(websocket, path):
     client_id = id(websocket)
     clients[client_id] = websocket
@@ -25,18 +34,24 @@ async def handle_client(websocket, path):
         print(f"Error managing client {client_id}: {e}")
 
 
+"""
+Process all incoming messages from a client
+"""
 async def process_client_messages(websocket, client_id):
     global active_speaker
 
     try:
         async for message in websocket:
             print(f"Received message: {message}\n")
+
+            # Check if the message is audio (bytes) or JSON control message
             if isinstance(message, bytes):
                 if active_speaker == client_id:
                     print("Play audio\n")
-                    stream.write(message)
+                    stream.write(message) # Play the audio
             else:
                 try:
+                    # Parse JSON control messages
                     control_message = json.loads(message)
 
                     if control_message["type"] == "request_speaker":
@@ -44,6 +59,7 @@ async def process_client_messages(websocket, client_id):
                         
                     elif control_message["type"] == "release_speaker" and active_speaker == client_id:
                         await handle_release_speaker(client_id)
+                
                 except ValueError: 
                     print(f"Received Invalid message: {message}\n")
 
@@ -52,6 +68,9 @@ async def process_client_messages(websocket, client_id):
         await remove_client(client_id)
 
 
+"""
+Handle a client's request to speak.
+"""
 async def handle_request_to_speaker(websocket, client_id):
     global active_speaker
 
@@ -64,6 +83,10 @@ async def handle_request_to_speaker(websocket, client_id):
             await websocket.send("speak_denied")
             print(f"Client {client_id} denied from speaking.")
 
+
+"""
+Handle the release of the speaker from the client
+"""
 async def handle_release_speaker(client_id):
     global active_speaker
 
@@ -73,6 +96,10 @@ async def handle_release_speaker(client_id):
             await notify_all_client()
             print(f"Client {client_id} released the speaker.")
 
+
+"""
+Remove a client from the conneced clients list
+"""
 async def remove_client(client_id):
     if client_id in clients:
         del clients[client_id]
@@ -80,6 +107,10 @@ async def remove_client(client_id):
     if active_speaker == client_id:
         await handle_release_speaker(client_id)
 
+
+"""
+Send a message to all connected clients to tell them the speaker is available
+"""
 async def notify_all_client():
     for websocket in clients.values():
         await websocket.send("speak_released")
