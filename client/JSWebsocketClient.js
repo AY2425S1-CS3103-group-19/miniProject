@@ -7,7 +7,7 @@ const connectButton = document.getElementById("connectButton");
 const disconnectButton = document.getElementById("disconnectButton");
 
 let isAllowedToSpeak = false;
-let socket, audioContext, mediaStream, audioProcessor;
+let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
 function connect() {
     // Disable button once its pressed to prevent spamming
@@ -25,6 +25,14 @@ function connect() {
         // Enable button to allow disconnection from the server
         disconnectButton.disabled = false;
         statusElement.innerText = "Status: Connected. You can now speak.";
+
+        // Send sample rate as soon as socket is connected
+        if (client_sample_rate !== defaultSampleRate) {
+            const msg = JSON.stringify({ type: "send_sample_rate", sample_rate: client_sample_rate });
+            socket.send(msg);
+            console.log("Send client sample rate");
+            console.log(client_sample_rate);
+        }
     };
 
     socket.onclose = () => {
@@ -33,7 +41,7 @@ function connect() {
         connectButton.disabled = false;
         disconnectButton.disabled = true;
         statusElement.innerText = "Status: Disconnected";
-        alert("Connection failed. Please reconnect.");
+        console.log("Connection failed. Please reconnect.");
     };
 
     socket.onerror = () => {
@@ -79,15 +87,7 @@ function disconnect() {
 */
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { 
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
-    const client_sample_rate = audioContext.sampleRate;
-
-    if (client_sample_rate !== defaultSampleRate) {
-        const msg = JSON.stringify({ type: "send_sample_rate", sample_rate: client_sample_rate });
-        socket.send(msg);
-        console.log("Send client sample rate");
-        console.log(client_sample_rate);
-    }
+    client_sample_rate = audioContext.sampleRate;
 
     // Captures audio from the user's microphone for processing
     mediaStream = audioContext.createMediaStreamSource(stream);

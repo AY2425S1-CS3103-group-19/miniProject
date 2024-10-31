@@ -11,12 +11,12 @@ import time
 default_sample_rate = 48000
 
 # Setup PyAudio for real-time audio playback
-auido = pyaudio.PyAudio()
+audio = pyaudio.PyAudio()
 
 # Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
-stream = auido.open(format=pyaudio.paInt16, 
-                    channels=1, 
-                    rate=default_sample_rate, 
+stream = audio.open(format=pyaudio.paInt16,
+                    channels=1,
+                    rate=default_sample_rate,
                     output=True)
 
 # Track the current active speaker
@@ -48,9 +48,9 @@ async def handle_client(websocket, path):
         await remove_client(client_id)
 
         if (stream.is_stopped):
-            stream = auido.open(format=pyaudio.paInt16, 
-                                channels=1, 
-                                rate=default_sample_rate, 
+            stream = audio.open(format=pyaudio.paInt16,
+                                channels=1,
+                                rate=default_sample_rate,
                                 output=True)
             print("Reset Stream")
 
@@ -85,6 +85,7 @@ async def process_client_messages(websocket, client_id):
 
                     elif control_message["type"] == "close_connection":
                         await remove_client(client_id)
+                        return
 
                 except ValueError: 
                     print(f"Received Invalid message: {message}\n")
