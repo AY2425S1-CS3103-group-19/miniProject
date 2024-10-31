@@ -11,12 +11,12 @@ import time
 default_sample_rate = 48000
 
 # Setup PyAudio for real-time audio playback
-auido = pyaudio.PyAudio()
+audio = pyaudio.PyAudio()
 
 # Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
-stream = auido.open(format=pyaudio.paInt16, 
-                    channels=1, 
-                    rate=default_sample_rate, 
+stream = audio.open(format=pyaudio.paInt16,
+                    channels=1,
+                    rate=default_sample_rate,
                     output=True)
 
 # Track the current active speaker
@@ -48,9 +48,9 @@ async def handle_client(websocket, path):
         await remove_client(client_id)
 
         if (stream.is_stopped):
-            stream = auido.open(format=pyaudio.paInt16, 
-                                channels=1, 
-                                rate=default_sample_rate, 
+            stream = audio.open(format=pyaudio.paInt16,
+                                channels=1,
+                                rate=default_sample_rate,
                                 output=True)
             print("Reset Stream")
 
@@ -82,6 +82,10 @@ async def process_client_messages(websocket, client_id):
                     elif control_message["type"] == "send_sample_rate":
                         client_sample_rate = control_message["sample_rate"]
                         print(f"Client {client_id} sample rate is {client_sample_rate}")
+
+                    elif control_message["type"] == "close_connection":
+                        await remove_client(client_id)
+                        return
 
                 except ValueError: 
                     print(f"Received Invalid message: {message}\n")
@@ -140,7 +144,7 @@ async def handle_release_speaker(client_id):
 
 
 """
-Remove a client from the conneced clients list
+Remove a client from the connected clients list
 """
 async def remove_client(client_id):
     global active_speaker
