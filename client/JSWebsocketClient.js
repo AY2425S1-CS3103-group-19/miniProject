@@ -77,9 +77,11 @@ function connect() {
 
 
 function disconnect() {
-    const closeMessage = JSON.stringify({ type: "close_connection" });
-    socket.send(closeMessage);
-    socket.close();
+    if (socket.readyState === WebSocket.OPEN) {
+        const closeMessage = JSON.stringify({ type: "close_connection" });
+        socket.send(closeMessage);
+        socket.close();
+    }
 }
 
 
@@ -140,9 +142,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
 // Disconnect before closing the tab/browser
 window.addEventListener("beforeunload", function (e) {
-    if (socket.readyState === WebSocket.OPEN) {
-        disconnect();
-    }
+    disconnect();
 });
 
 
