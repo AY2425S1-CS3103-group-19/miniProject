@@ -9,7 +9,14 @@
 
     <h1>Push-to-Talk</h1>
     <button id="pushToTalkButton" disabled>Hold to Speak</button>
-    <p id="status">Status: Connecting...</p>
+    <p id="status">Status: Disconnected</p>
+
+    <label for="ipaddr">IP Address:</label><br>
+    <input type="text" id="ipaddr" name="ipaddr" placeholder="127.0.0.1" value="127.0.0.1"><br><br>
+    <label for="portno">Port #:</label><br>
+    <input type="text" id="portno" name="portno" placeholder="8765" value="8765"><br><br>
+    <input type="submit" id="connectButton" value="Connect" onclick="connect()">
+    <input type="submit" id="disconnectButton" value="Disconnect" onclick="disconnect()" disabled/>
 
     <!-- Link to the JavaScript file -->
     <script src="JSWebsocketClient.js"></script>

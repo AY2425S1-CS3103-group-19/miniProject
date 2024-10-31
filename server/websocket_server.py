@@ -83,6 +83,9 @@ async def process_client_messages(websocket, client_id):
                         client_sample_rate = control_message["sample_rate"]
                         print(f"Client {client_id} sample rate is {client_sample_rate}")
 
+                    elif control_message["type"] == "close_connection":
+                        await remove_client(client_id)
+
                 except ValueError: 
                     print(f"Received Invalid message: {message}\n")
 
@@ -140,7 +143,7 @@ async def handle_release_speaker(client_id):
 
 
 """
-Remove a client from the conneced clients list
+Remove a client from the connected clients list
 """
 async def remove_client(client_id):
     global active_speaker

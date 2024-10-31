@@ -3,51 +3,74 @@
 const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
 const pttButton = document.getElementById("pushToTalkButton");
+const connectButton = document.getElementById("connectButton");
+const disconnectButton = document.getElementById("disconnectButton");
 
-let socket = new WebSocket("ws://127.0.0.1:8765");
 let isAllowedToSpeak = false;
-let audioContext, mediaStream, audioProcessor;
+let socket, audioContext, mediaStream, audioProcessor;
 
-socket.onopen = () => {
-    console.log("WebSocket connection opened.");
-    pttButton.disabled = false;
-    statusElement.innerText = "Status: Connected. You can now speak.";
-};
+function connect() {
+    // Disable button once its pressed to prevent spamming
+    connectButton.disabled = true;
+    statusElement.innerText = "Status: Connecting...";
 
-socket.onclose = () => {
-    pttButton.disabled = true;
-    statusElement.innerText = "Status: Disconnected";
-    alert("Connection lost. Please reconnect.");
-};
+    let ipaddr = document.getElementById("ipaddr").value;
+    let portno = document.getElementById("portno").value;
 
-socket.onerror = () => {
-    console.error("WebSocket error:", error);
-    alert("WebSocket connection failed.");
-};
+    socket = new WebSocket("ws://" + ipaddr + ":" + portno);
 
-socket.onmessage = (event) => {
-    const message = event.data;
-
-    if (message === "speak_granted") {
-        isAllowedToSpeak = true;
+    socket.onopen = () => {
+        console.log("WebSocket connection opened.");
         pttButton.disabled = false;
-        statusElement.innerText = "Status: Speaking...";
-
-        // Start processing audio
-        mediaStream.connect(audioProcessor);  
-        audioProcessor.connect(audioContext.destination);
-
-    } else if (message === "speak_denied") {
-        isAllowedToSpeak = false;
-        pttButton.disabled = true;
-        statusElement.innerText = "Status: Another student is speaking.";
-
-    } else if (message === "speak_released") {
-        isAllowedToSpeak = true;
-        pttButton.disabled = false;
+        // Enable button to allow disconnection from the server
+        disconnectButton.disabled = false;
         statusElement.innerText = "Status: Connected. You can now speak.";
-    }
-};
+    };
+
+    socket.onclose = () => {
+        pttButton.disabled = true;
+        // Enable button once its disconnected from the server
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+        statusElement.innerText = "Status: Disconnected";
+        alert("Connection failed. Please reconnect.");
+    };
+
+    socket.onerror = () => {
+        console.error("WebSocket error:", error);
+        alert("WebSocket connection failed.");
+    };
+
+    socket.onmessage = (event) => {
+        const message = event.data;
+
+        if (message === "speak_granted") {
+            isAllowedToSpeak = true;
+            pttButton.disabled = false;
+            statusElement.innerText = "Status: Speaking...";
+
+            // Start processing audio
+            mediaStream.connect(audioProcessor);
+            audioProcessor.connect(audioContext.destination);
+
+        } else if (message === "speak_denied") {
+            isAllowedToSpeak = false;
+            pttButton.disabled = true;
+            statusElement.innerText = "Status: Another student is speaking.";
+
+        } else if (message === "speak_released") {
+            isAllowedToSpeak = true;
+            pttButton.disabled = false;
+            statusElement.innerText = "Status: Connected. You can now speak.";
+        }
+    };
+}
+
+function disconnect() {
+    const closeMessage = JSON.stringify({ type: "close_connection" });
+    socket.send(closeMessage);
+    socket.close();
+}
 
 // Capture audio using Web Audio API
 /* 
