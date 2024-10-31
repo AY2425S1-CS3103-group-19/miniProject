@@ -1,15 +1,17 @@
 // JS Websocket Client
 
-let audioContext;
-let socket = new WebSocket("ws://localhost:8765");
+const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
 const pttButton = document.getElementById("pushToTalkButton");
+
+let socket = new WebSocket("ws://127.0.0.1:8765");
 let isAllowedToSpeak = false;
+let audioContext, mediaStream, audioProcessor;
 
 socket.onopen = () => {
     console.log("WebSocket connection opened.");
     pttButton.disabled = false;
-    statusElement.innerText = "Status: Connected";
+    statusElement.innerText = "Status: Connected. You can now speak.";
 };
 
 socket.onclose = () => {
@@ -26,46 +28,97 @@ socket.onerror = () => {
 socket.onmessage = (event) => {
     const message = event.data;
 
-    if (message === "allow_speak") {
+    if (message === "speak_granted") {
         isAllowedToSpeak = true;
         pttButton.disabled = false;
-        statusElement.innerText = "Status: You can now speak.";
-    } else {
+        statusElement.innerText = "Status: Speaking...";
+
+        // Start processing audio
+        mediaStream.connect(audioProcessor);  
+        audioProcessor.connect(audioContext.destination);
+
+    } else if (message === "speak_denied") {
         isAllowedToSpeak = false;
         pttButton.disabled = true;
         statusElement.innerText = "Status: Another student is speaking.";
+
+    } else if (message === "speak_released") {
+        isAllowedToSpeak = true;
+        pttButton.disabled = false;
+        statusElement.innerText = "Status: Connected. You can now speak.";
     }
 };
 
-// Capture microphone input
-navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    let mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = (event) => {
-        if (isAllowedToSpeak) {
-            socket.send(event.data);  // Send the audio data to the server
-        }
-    };
+// Capture audio using Web Audio API
+/* 
+    Note: `createScriptProcessor()` and the `onaudioprocess` are deprecated.
+    It is recommended to use `AudioWorklet` instead for lower latency and more efficient processing.
+*/
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { 
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
-    // Start recording when button is pressed
-    document.getElementById('pushToTalkButton').addEventListener('mousedown', () => {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log("AudioContext created.");
-        } else if (audioContext.state === 'suspended') {
-            audioContext.resume().then(() => {
-                console.log("AudioContext resumed.");
-            });
+    const client_sample_rate = audioContext.sampleRate;
+
+    if (client_sample_rate !== defaultSampleRate) {
+        const msg = JSON.stringify({ type: "send_sample_rate", sample_rate: client_sample_rate });
+        socket.send(msg);
+        console.log("Send client sample rate");
+        console.log(client_sample_rate);
+    }
+
+    // Captures audio from the user's microphone for processing
+    mediaStream = audioContext.createMediaStreamSource(stream);
+
+    // Create a ScriptProcessorNode to process audio data in chunks.
+    audioProcessor = audioContext.createScriptProcessor(bufferSize=4096, 
+                                                        numberOfInputChannels=1, 
+                                                        numberOfOutputChannels=1);
+
+    // Register an event handler to process audio in real-time
+    // onaudioprocess is called whenever a new chunk of audio data is available
+    audioProcessor.onaudioprocess = (audioEvent) => {
+        // Get raw PCM data from the input audio buffer as Float32 values
+        const audioBuffer = audioEvent.inputBuffer.getChannelData(0);
+        const pcmData = float32ToInt16(audioBuffer);
+
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(pcmData);  // Send the PCM data via WebSocket
+            console.log("Sent audio chunk");
         }
-        
-        if (isAllowedToSpeak) {
-            mediaRecorder.start();
-            statusElement.innerText = "Status: Speaking...";
-        }
+    }
+    
+    // Start audio processing when PTT button is pressed
+    pttButton.addEventListener('mousedown', () => {
+        const requestMessage = JSON.stringify({ type: "request_speaker" });
+        socket.send(requestMessage);  // Request to speak
+
+        // Start processing audio when the server have granted access.
     });
 
-    // Stop recording when button is released
-    document.getElementById('pushToTalkButton').addEventListener('mouseup', () => {
-        mediaRecorder.stop();
-        statusElement.innerText = "Status: Connected";
+    // Stop audio processing when button is released
+    pttButton.addEventListener('mouseup', () => {
+        const releaseMessage = JSON.stringify({ type: "release_speaker" });
+        socket.send(releaseMessage);  // Notify server to release speaker
+
+        if (isAllowedToSpeak) {
+            mediaStream.disconnect(audioProcessor);  // Stop processing audio
+            audioProcessor.disconnect(audioContext.destination);
+        }
     });
+}).catch(error => {
+    console.error("Microphone access error:", error);
+    alert("Please allow microphone access.");
 });
+
+
+// Convert Float32 audio data to Int16 data
+// - Float32 takes the range: -1.0 to 1.0
+// - Int16 takes the range: -(2 ** 15) to (2 ** 15 - 1)
+function float32ToInt16(buffer) {
+    let length = buffer.length;
+    let pcmBuffer = new Int16Array(length);
+    while (length--) {
+        pcmBuffer[length] = Math.max(-1, Math.min(1, buffer[length])) * (2 ** 15 - 1);
+    }
+    return pcmBuffer.buffer;  // Return ArrayBuffer for WebSocket transmission
+}
