@@ -141,7 +141,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
 
 // Disconnect before closing the tab/browser
-window.addEventListener("beforeunload", function (e) {
+window.addEventListener("beforeunload", (event) => {
     disconnect();
 });
 
