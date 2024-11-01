@@ -37,14 +37,14 @@ function connect() {
 
         // Send sample rate as soon as socket is connected
         if (client_sample_rate !== defaultSampleRate) {
-            const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_SAMPLE_RATE, sample_rate: client_sample_rate });            socket.send(msg);
+            const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_SAMPLE_RATE, sample_rate: client_sample_rate });
+            socket.send(msg);
             console.log("Send client sample rate:", client_sample_rate);
         }
     };
 
     socket.onclose = () => {
         pttButton.disabled = true;
-        // Enable button once its disconnected from the server
         connectButton.disabled = false;
         disconnectButton.disabled = true;
         statusElement.innerText = "Status: Disconnected";
@@ -58,7 +58,7 @@ function connect() {
 
     socket.onmessage = (event) => {
         const message = event.data;
-
+    
         if (message === MESSAGE_TYPES.SPEAK_GRANTED) {
             isAllowedToSpeak = true;
             pttButton.disabled = false;
@@ -73,25 +73,22 @@ function connect() {
             statusElement.innerText = "Status: Another student is speaking.";
 
         } else if (message === MESSAGE_TYPES.SPEAK_RELEASED) {
-            isAllowedToSpeak = true;
+            isAllowedToSpeak = false;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Connected. You can now speak.";
         }
     };
+    
 }
-
 
 function disconnect() {
-    if (socket.readyState === WebSocket.OPEN) {
-        const closeMessage = JSON.stringify({ type: MESSAGE_TYPES.CLOSE_CONNECTION });
-        socket.send(closeMessage);
-        socket.close();
-    }
+    const closeMessage = JSON.stringify({ type: MESSAGE_TYPES.CLOSE_CONNECTION });
+    socket.send(closeMessage);
+    socket.close();
 }
 
-
 // Capture audio using Web Audio API
-navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { 
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     client_sample_rate = audioContext.sampleRate;
 
@@ -107,18 +104,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     audioContext.audioWorklet.addModule('audio-processor.js').then(() => {
         audioProcessor = new AudioWorkletNode(audioContext, 'my-processor');
         mediaStream.connect(audioProcessor).connect(audioContext.destination);
-    
-        // Send audio data to WebSocket when received
-        audioProcessor.port.onmessage = (event) => {
-            if (socket.readyState === WebSocket.OPEN) {
-                const audioBuffer = event.data;
-                const pcmData = float32ToInt16(audioBuffer);
-                socket.send(pcmData);
-                console.log("Send audio chunk")
-            }
-        };
     });
-    
+
     // Start audio processing when PTT button is pressed
     pttButton.addEventListener('mousedown', () => {
         const requestMessage = JSON.stringify({ type: MESSAGE_TYPES.REQUEST_SPEAKER });
@@ -130,26 +117,16 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         const releaseMessage = JSON.stringify({ type: MESSAGE_TYPES.RELEASE_SPEAKER });
         socket.send(releaseMessage);  // Notify server to release speaker
 
-        if (isAllowedToSpeak) {
-            audioProcessor.port.postMessage({ command: 'stopRecording' });  // Stop recording
-        }
+        // Stop processing audio
+        audioProcessor.port.postMessage({ command: 'stopRecording' });  // Stop recording
     });
-
+    
 }).catch(error => {
     console.error("Microphone access error:", error);
     alert("Please allow microphone access.");
 });
 
 
-// Disconnect before closing the tab/browser
-window.addEventListener("beforeunload", (event) => {
-    disconnect();
-});
-
-
-// Convert Float32 audio data to Int16 data
-// - Float32 takes the range: -1.0 to 1.0
-// - Int16 takes the range: -(2 ** 15) to (2 ** 15 - 1)
 function float32ToInt16(buffer) {
     let length = buffer.length;
     let pcmBuffer = new Int16Array(length);
