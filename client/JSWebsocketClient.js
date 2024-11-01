@@ -65,7 +65,7 @@ function connect() {
             isAllowedToSpeak = false;
             pttButton.disabled = true;
             statusElement.innerText = "Status: Another student is speaking.";
-            
+
         } else if (message === "speak_released") {
             isAllowedToSpeak = false;
             pttButton.disabled = false;
@@ -102,7 +102,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     // Start audio processing when PTT button is pressed
     pttButton.addEventListener('mousedown', () => {
-        const requestMessage = JSON.stringify({ type: "request_speaker" });
+        const requestMessage = JSON.stringify({ type: MESSAGE_TYPES.REQUEST_SPEAKER });
         socket.send(requestMessage);  // Request to speak
 
         // Start processing audio when the server has granted access.
@@ -111,7 +111,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     // Stop audio processing when button is released
     pttButton.addEventListener('mouseup', () => {
-        const releaseMessage = JSON.stringify({ type: "release_speaker" });
+        const releaseMessage = JSON.stringify({ type: MESSAGE_TYPES.RELEASE_SPEAKER });
         socket.send(releaseMessage);  // Notify server to release speaker
 
         // Stop processing audio
