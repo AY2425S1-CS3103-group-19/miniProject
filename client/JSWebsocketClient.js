@@ -1,4 +1,4 @@
-// JS Websocket Client
+// JS WebSocket Client
 
 const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
@@ -9,9 +9,18 @@ const disconnectButton = document.getElementById("disconnectButton");
 let isAllowedToSpeak = false;
 let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
+const MESSAGE_TYPES = {
+    REQUEST_SPEAKER: "request_speaker",
+    RELEASE_SPEAKER: "release_speaker",
+    SEND_SAMPLE_RATE: "send_sample_rate",
+    CLOSE_CONNECTION: "close_connection",
+    SPEAK_GRANTED: "speak_granted",
+    SPEAK_DENIED: "speak_denied",
+    SPEAK_RELEASED: "speak_released"
+};
 
 function connect() {
-    // Disable button once its pressed to prevent spamming
+    // Disable button once it's pressed to prevent spamming
     connectButton.disabled = true;
     statusElement.innerText = "Status: Connecting...";
 
@@ -23,29 +32,26 @@ function connect() {
     socket.onopen = () => {
         console.log("WebSocket connection opened.");
         pttButton.disabled = false;
-        // Enable button to allow disconnection from the server
         disconnectButton.disabled = false;
         statusElement.innerText = "Status: Connected. You can now speak.";
 
         // Send sample rate as soon as socket is connected
         if (client_sample_rate !== defaultSampleRate) {
-            const msg = JSON.stringify({ type: "send_sample_rate", sample_rate: client_sample_rate });
+            const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_SAMPLE_RATE, sample_rate: client_sample_rate });
             socket.send(msg);
-            console.log("Send client sample rate");
-            console.log(client_sample_rate);
+            console.log("Send client sample rate:", client_sample_rate);
         }
     };
 
     socket.onclose = () => {
         pttButton.disabled = true;
-        // Enable button once its disconnected from the server
         connectButton.disabled = false;
         disconnectButton.disabled = true;
         statusElement.innerText = "Status: Disconnected";
-        console.log("Connection failed. Please reconnect.");
+        console.log("Connection closed. Please reconnect.");
     };
 
-    socket.onerror = () => {
+    socket.onerror = (error) => {
         console.error("WebSocket error:", error);
         alert("WebSocket connection failed.");
     };
@@ -53,7 +59,7 @@ function connect() {
     socket.onmessage = (event) => {
         const message = event.data;
 
-        if (message === "speak_granted") {
+        if (message === MESSAGE_TYPES.SPEAK_GRANTED) {
             isAllowedToSpeak = true;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Speaking...";
@@ -62,12 +68,12 @@ function connect() {
             mediaStream.connect(audioProcessor);
             audioProcessor.connect(audioContext.destination);
 
-        } else if (message === "speak_denied") {
+        } else if (message === MESSAGE_TYPES.SPEAK_DENIED) {
             isAllowedToSpeak = false;
             pttButton.disabled = true;
             statusElement.innerText = "Status: Another student is speaking.";
 
-        } else if (message === "speak_released") {
+        } else if (message === MESSAGE_TYPES.SPEAK_RELEASED) {
             isAllowedToSpeak = true;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Connected. You can now speak.";
@@ -78,7 +84,7 @@ function connect() {
 
 function disconnect() {
     if (socket.readyState === WebSocket.OPEN) {
-        const closeMessage = JSON.stringify({ type: "close_connection" });
+        const closeMessage = JSON.stringify({ type: MESSAGE_TYPES.CLOSE_CONNECTION });
         socket.send(closeMessage);
         socket.close();
     }
@@ -118,7 +124,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     
     // Start audio processing when PTT button is pressed
     pttButton.addEventListener('mousedown', () => {
-        const requestMessage = JSON.stringify({ type: "request_speaker" });
+        const requestMessage = JSON.stringify({ type: MESSAGE_TYPES.REQUEST_SPEAKER });
         socket.send(requestMessage);  // Request to speak
 
         // Start processing audio when the server have granted access.
@@ -126,7 +132,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     // Stop audio processing when button is released
     pttButton.addEventListener('mouseup', () => {
-        const releaseMessage = JSON.stringify({ type: "release_speaker" });
+        const releaseMessage = JSON.stringify({ type: MESSAGE_TYPES.RELEASE_SPEAKER });
         socket.send(releaseMessage);  // Notify server to release speaker
 
         if (isAllowedToSpeak) {
@@ -134,6 +140,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             audioProcessor.disconnect(audioContext.destination);
         }
     });
+
 }).catch(error => {
     console.error("Microphone access error:", error);
     alert("Please allow microphone access.");
