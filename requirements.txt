@@ -1,0 +1,4 @@
+websockets
+pyaudio
+numpy
+scipy
