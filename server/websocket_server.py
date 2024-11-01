@@ -6,7 +6,7 @@ import pyaudio
 import json
 import numpy as np
 from scipy.signal import resample
-import time
+
 
 default_sample_rate = 48000
 
@@ -53,6 +53,7 @@ async def handle_client(websocket, path):
                                 rate=default_sample_rate,
                                 output=True)
             print("Reset Stream")
+
 
 """
 Process all incoming messages from a client
@@ -175,7 +176,14 @@ async def notify_all_clients():
 
 
 # Start WebSocket server
-start_server = websockets.serve(handle_client, "127.0.0.1", 8765)
+try:
+    print("Server started")
+    print("To terminate the program press: Ctrl+C")
+    start_server = websockets.serve(handle_client, "0.0.0.0", 8765)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
+except KeyboardInterrupt:
+    stream.close()
+    print("Server program terminated")
+

@@ -9,6 +9,7 @@ const disconnectButton = document.getElementById("disconnectButton");
 let isAllowedToSpeak = false;
 let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
+
 function connect() {
     // Disable button once its pressed to prevent spamming
     connectButton.disabled = true;
@@ -74,11 +75,15 @@ function connect() {
     };
 }
 
+
 function disconnect() {
-    const closeMessage = JSON.stringify({ type: "close_connection" });
-    socket.send(closeMessage);
-    socket.close();
+    if (socket.readyState === WebSocket.OPEN) {
+        const closeMessage = JSON.stringify({ type: "close_connection" });
+        socket.send(closeMessage);
+        socket.close();
+    }
 }
+
 
 // Capture audio using Web Audio API
 /* 
@@ -93,7 +98,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaStream = audioContext.createMediaStreamSource(stream);
 
     // Create a ScriptProcessorNode to process audio data in chunks.
-    audioProcessor = audioContext.createScriptProcessor(bufferSize=4096, 
+    // bufferSize=0 means the program will automatically determine the buffer size 
+    audioProcessor = audioContext.createScriptProcessor(bufferSize=0, 
                                                         numberOfInputChannels=1, 
                                                         numberOfOutputChannels=1);
 
@@ -131,6 +137,12 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 }).catch(error => {
     console.error("Microphone access error:", error);
     alert("Please allow microphone access.");
+});
+
+
+// Disconnect before closing the tab/browser
+window.addEventListener("beforeunload", (event) => {
+    disconnect();
 });
 
 

@@ -68,8 +68,15 @@
             color: white;
         }
 
-        #connectButton:hover {
-            background-color: #45a049;
+        #connectButton:disabled {
+            background-color: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        #connectButton:not(:disabled):hover {
+            background-color: #409344;
+            color: #f5f5f5;
         }
 
         #disconnectButton {
@@ -78,8 +85,15 @@
             margin-top: 0.5rem;
         }
 
-        #disconnectButton:hover {
-            background-color: #e53935;
+        #disconnectButton:disabled {
+            background-color: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        #disconnectButton:not(:disabled):hover  {
+            background-color: #d83431;
+            color: #f5f5f5;
         }
 
         #pushToTalkButton {
@@ -94,8 +108,9 @@
             cursor: not-allowed;
         }
 
-        #pushToTalkButton:active {
+        #pushToTalkButton:not(:disabled):active {
             background-color: #0056b3;
+            color: #e8e8e8;
         }
     </style>
 </head>
