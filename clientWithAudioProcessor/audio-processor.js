@@ -21,7 +21,7 @@ class MyAudioProcessor extends AudioWorkletProcessor {
             if (input.length > 0 && input[0].length > 0) {
                 const inputData = input[0];
 
-                // Send PCM data via WebSocket
+                // Send PCM data to main thread
                 if (this.port) {
                     this.port.postMessage(inputData);
                 }

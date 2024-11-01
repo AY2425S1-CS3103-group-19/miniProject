@@ -1,33 +1,13 @@
 # Python Websocket Server
 
+import argparse
+import re
 import asyncio
 import websockets
 import pyaudio
 import json
 import numpy as np
 from scipy.signal import resample
-
-
-default_sample_rate = 48000
-
-# Setup PyAudio for real-time audio playback
-audio = pyaudio.PyAudio()
-
-# Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
-stream = audio.open(format=pyaudio.paInt16,
-                    channels=1,
-                    rate=default_sample_rate,
-                    output=True)
-
-# Track the current active speaker
-active_speaker = None 
-
-# Store connected clients and their WebSocket objects.
-# Format: {client_id : websocket_object}
-clients = {} 
-
-# Mutex to manage access to active_speaker
-lock = asyncio.Lock()
 
 
 """
@@ -174,12 +154,112 @@ async def notify_all_clients():
     print(f"Notified all clients that speaker is available")
 
 
+"""
+Validate IPv4 address
+"""
+def validate_ip(ip):
+    # Allow 'localhost' as a valid IP equivalent
+    if ip == "localhost":
+        return "127.0.0.1"
 
-# Start WebSocket server
+    # Regex pattern for a valid IPv4 address
+    pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+    if not re.match(pattern, ip):
+        raise argparse.ArgumentTypeError(f"invalid IP address: '{ip}'")
+    
+    # Check each octet is between 0 and 255
+    octets = ip.split(".")
+    if any(int(octet) < 0 or int(octet) > 255 for octet in octets):
+        raise argparse.ArgumentTypeError(f"invalid IP address: '{ip}'")
+    
+    return ip
+
+
+"""
+Validate port number
+"""
+def validate_port(port):
+    port = int(port)
+    if port < 1 or port > 65535:
+        raise argparse.ArgumentTypeError(f"port number must be between 1 and 65535, got '{port}'")
+    
+    return port
+
+
+"""
+Parse for command line flags
+"""
+def parse_flags():
+    parser = argparse.ArgumentParser()
+
+    # Option for IP address, with default set to "0.0.0.0"
+    parser.add_argument(
+        "-ip", "--ip-address", 
+        help="IPv4 address to bind the server", 
+        default="0.0.0.0", 
+        type=validate_ip
+    )
+
+    # Option for port number, with default set to 8765
+    parser.add_argument(
+        "-p", "--port", 
+        help="Port number to bind the server", 
+        default=8765, 
+        type=validate_port
+    )
+
+    # Boolean flag to save audio, default is False, becomes True when provided
+    parser.add_argument(
+        "-sa", "--save-audio", 
+        help="Enable saving the received audio to a file", 
+        action="store_true"
+    )
+
+    return parser.parse_args()
+
+
+
+# Main
 try:
-    print("Server started")
-    print("To terminate the program press: Ctrl+C")
-    start_server = websockets.serve(handle_client, "0.0.0.0", 8765)
+    # Parse for flags
+    args = parse_flags()
+    
+    ip = args.ip_address
+    port = args.port
+    save_audio = args.save_audio
+    
+    print(
+        f"Server started on:\n"
+        f"  IP Address : {args.ip_address}\n"
+        f"  Port       : {args.port}\n"
+        f"Audio saving is {'enabled' if args.save_audio else 'disabled'}."
+    )
+    print("To terminate the program press: Ctrl+C\n")
+
+    default_sample_rate = 48000
+
+    # Setup PyAudio for real-time audio playback
+    audio = pyaudio.PyAudio()
+
+    # Use paInt16 here as it is suitable for most hardwares and has less space requirement compared to paFloat32
+    stream = audio.open(format=pyaudio.paInt16,
+                        channels=1,
+                        rate=default_sample_rate,
+                        output=True)
+
+    # Track the current active speaker
+    active_speaker = None 
+
+    # Store connected clients and their WebSocket objects.
+    # Format: {client_id : websocket_object}
+    clients = {} 
+
+    # Mutex to manage access to active_speaker
+    lock = asyncio.Lock()
+
+
+    # Start web server
+    start_server = websockets.serve(handle_client, ip, port)
 
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
