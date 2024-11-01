@@ -58,7 +58,7 @@ function connect() {
 
     socket.onmessage = (event) => {
         const message = event.data;
-    
+
         if (message === MESSAGE_TYPES.SPEAK_GRANTED) {
             isAllowedToSpeak = true;
             pttButton.disabled = false;
@@ -73,19 +73,22 @@ function connect() {
             statusElement.innerText = "Status: Another student is speaking.";
 
         } else if (message === MESSAGE_TYPES.SPEAK_RELEASED) {
-            isAllowedToSpeak = false;
+            isAllowedToSpeak = true;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Connected. You can now speak.";
         }
     };
-    
 }
 
+
 function disconnect() {
-    const closeMessage = JSON.stringify({ type: MESSAGE_TYPES.CLOSE_CONNECTION });
-    socket.send(closeMessage);
-    socket.close();
+    if (socket.readyState === WebSocket.OPEN) {
+        const closeMessage = JSON.stringify({ type: MESSAGE_TYPES.CLOSE_CONNECTION });
+        socket.send(closeMessage);
+        socket.close();
+    }
 }
+
 
 // Capture audio using Web Audio API
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -104,8 +107,18 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     audioContext.audioWorklet.addModule('audio-processor.js').then(() => {
         audioProcessor = new AudioWorkletNode(audioContext, 'my-processor');
         mediaStream.connect(audioProcessor).connect(audioContext.destination);
+    
+        // Send audio data to WebSocket when received
+        audioProcessor.port.onmessage = (event) => {
+            if (socket.readyState === WebSocket.OPEN) {
+                const audioBuffer = event.data;
+                const pcmData = float32ToInt16(audioBuffer);
+                socket.send(pcmData);
+                console.log("Send audio chunk")
+            }
+        };
     });
-
+    
     // Start audio processing when PTT button is pressed
     pttButton.addEventListener('mousedown', () => {
         const requestMessage = JSON.stringify({ type: MESSAGE_TYPES.REQUEST_SPEAKER });
@@ -117,8 +130,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         const releaseMessage = JSON.stringify({ type: MESSAGE_TYPES.RELEASE_SPEAKER });
         socket.send(releaseMessage);  // Notify server to release speaker
 
-        // Stop processing audio
-        audioProcessor.port.postMessage({ command: 'stopRecording' });  // Stop recording
+        if (isAllowedToSpeak) {
+            audioProcessor.port.postMessage({ command: 'stopRecording' });  // Stop recording
+        }
     });
     
 }).catch(error => {
@@ -127,6 +141,15 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 
+// Disconnect before closing the tab/browser
+window.addEventListener("beforeunload", (event) => {
+    disconnect();
+});
+
+
+// Convert Float32 audio data to Int16 data
+// - Float32 takes the range: -1.0 to 1.0
+// - Int16 takes the range: -(2 ** 15) to (2 ** 15 - 1)
 function float32ToInt16(buffer) {
     let length = buffer.length;
     let pcmBuffer = new Int16Array(length);
