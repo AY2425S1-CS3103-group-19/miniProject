@@ -14,6 +14,10 @@ const MESSAGE_TYPES = {
     RELEASE_SPEAKER: "release_speaker",
     SEND_SAMPLE_RATE: "send_sample_rate",
     CLOSE_CONNECTION: "close_connection",
+    SPEAK_GRANTED: "speak_granted",
+    SPEAK_DENIED: "speak_denied",
+    SPEAK_RELEASED: "speak_released"
+
 };
 
 function connect() {
@@ -56,17 +60,17 @@ function connect() {
     socket.onmessage = (event) => {
         const message = event.data;
     
-        if (message === "speak_granted") {
+        if (message === MESSAGE_TYPES.SPEAK_GRANTED) {
             isAllowedToSpeak = true;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Speaking...";
 
-        } else if (message === "speak_denied") {
+        } else if (message === MESSAGE_TYPES.SPEAK_DENIED) {
             isAllowedToSpeak = false;
             pttButton.disabled = true;
             statusElement.innerText = "Status: Another student is speaking.";
 
-        } else if (message === "speak_released") {
+        } else if (message === MESSAGE_TYPES.SPEAK_RELEASED) {
             isAllowedToSpeak = false;
             pttButton.disabled = false;
             statusElement.innerText = "Status: Connected. You can now speak.";
