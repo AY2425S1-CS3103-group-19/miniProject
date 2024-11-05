@@ -9,7 +9,7 @@ import json
 import numpy as np
 from scipy.signal import resample
 
-student_ids = {}
+student_ids = []
 
 """
 Handle each of the WebSocket connections
@@ -60,6 +60,12 @@ async def process_client_messages(websocket, client_id):
                         
                     elif control_message["type"] == "release_speaker" and active_speaker == client_id:
                         await handle_release_speaker(client_id)
+
+                    elif control_message["type"] == "send_student_id":
+                        temp_id = control_message["student_id"]
+                        if temp_id not in student_ids:
+                            student_ids.append(temp_id)
+                        print(f"Client's student id: {temp_id}")
 
                     elif control_message["type"] == "send_sample_rate":
                         client_sample_rate = control_message["sample_rate"]
