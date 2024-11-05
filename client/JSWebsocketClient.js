@@ -35,10 +35,16 @@ function connect() {
         disconnectButton.disabled = false;
         statusElement.innerText = "Status: Connected. You can now speak.";
 
-        // Send sample rate as soon as socket is connected
+        // Send student ID as soon as socket is connected
+        let studentID = document.getElementById("studentID").value;
+        const msg = JSON.stringify({ type: "student_id", student_id: studentID });
+        socket.send(msg);
+        console.log("Sent student ID:", studentID);
+
+        // Send sample rate if it differs from default
         if (client_sample_rate !== defaultSampleRate) {
-            const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_SAMPLE_RATE, sample_rate: client_sample_rate });
-            socket.send(msg);
+            const sampleRateMsg = JSON.stringify({ type: MESSAGE_TYPES.SEND_SAMPLE_RATE, sample_rate: client_sample_rate });
+            socket.send(sampleRateMsg);
             console.log("Send client sample rate:", client_sample_rate);
         }
     };

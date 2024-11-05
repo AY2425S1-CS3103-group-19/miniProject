@@ -9,6 +9,7 @@ import json
 import numpy as np
 from scipy.signal import resample
 
+student_ids = {}
 
 """
 Handle each of the WebSocket connections
