@@ -44,7 +44,7 @@
         }
 
         input[type="text"] {
-            width: 100%;
+            width: 94%;
             padding: 0.5rem;
             margin: 0.5rem 0;
             border: 1px solid #ccc;
@@ -127,14 +127,11 @@
         <label for="portno">Port #:</label>
         <input type="text" id="portno" name="portno" placeholder="8765" value="8765">
 
-        <input type="submit" id="connectButton" value="Connect" onclick="connect()">
-        <input type="submit" id="disconnectButton" value="Disconnect" onclick="disconnect()" disabled/>
-
-        <!-- Add Student ID input field -->
-        <label for="studentID" style="font-size: 0.8em; margin-top: 20px; display: inline-block;">Student ID:</label>
+        <label for="studentID">Student ID:</label>
         <input type="text" id="studentID" name="studentID" placeholder="Enter Student ID">
 
-
+        <input type="submit" id="connectButton" value="Connect" onclick="connect()">
+        <input type="submit" id="disconnectButton" value="Disconnect" onclick="disconnect()" disabled/>
     </div>
 
     <!-- Link to the JavaScript file -->
