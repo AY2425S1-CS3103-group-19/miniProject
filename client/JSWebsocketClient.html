@@ -4,115 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Push-to-Talk WebSocket Client</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            color: #333;
-        }
-
-        h1 {
-            color: #333;
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        #status {
-            font-size: 1rem;
-            margin-top: 0.5rem;
-            color: #666;
-        }
-
-        .container {
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            width: 300px;
-            text-align: center;
-        }
-
-        label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        input[type="submit"], #pushToTalkButton {
-            width: 100%;
-            padding: 0.7rem;
-            margin-top: 1rem;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        #connectButton {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        #connectButton:disabled {
-            background-color: #d1d5db;
-            color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        #connectButton:not(:disabled):hover {
-            background-color: #409344;
-            color: #f5f5f5;
-        }
-
-        #disconnectButton {
-            background-color: #f44336;
-            color: white;
-            margin-top: 0.5rem;
-        }
-
-        #disconnectButton:disabled {
-            background-color: #d1d5db;
-            color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        #disconnectButton:not(:disabled):hover  {
-            background-color: #d83431;
-            color: #f5f5f5;
-        }
-
-        #pushToTalkButton {
-            background-color: #007bff;
-            color: white;
-            font-weight: bold;
-        }
-
-        #pushToTalkButton:disabled {
-            background-color: #d1d5db;
-            color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        #pushToTalkButton:not(:disabled):active {
-            background-color: #0056b3;
-            color: #e8e8e8;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -127,14 +19,11 @@
         <label for="portno">Port #:</label>
         <input type="text" id="portno" name="portno" placeholder="8765" value="8765">
 
-        <input type="submit" id="connectButton" value="Connect" onclick="connect()">
-        <input type="submit" id="disconnectButton" value="Disconnect" onclick="disconnect()" disabled/>
-
-        <!-- Add Student ID input field -->
-        <label for="studentID" style="font-size: 0.8em; margin-top: 20px; display: inline-block;">Student ID:</label>
+        <label for="studentID">Student ID:</label>
         <input type="text" id="studentID" name="studentID" placeholder="Enter Student ID">
 
-
+        <input type="submit" id="connectButton" value="Connect" onclick="connect()">
+        <input type="submit" id="disconnectButton" value="Disconnect" onclick="disconnect()" disabled/>
     </div>
 
     <!-- Link to the JavaScript file -->

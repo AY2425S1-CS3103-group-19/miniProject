@@ -5,9 +5,10 @@ const statusElement = document.getElementById("status");
 const pttButton = document.getElementById("pushToTalkButton");
 const connectButton = document.getElementById("connectButton");
 const disconnectButton = document.getElementById("disconnectButton");
+const studentIDText = document.getElementById("studentID");
 
 let isAllowedToSpeak = false;
-let socket, audioContext, mediaStream, audioProcessor, client_sample_rate, student_id;
+let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
 const MESSAGE_TYPES = {
     SEND_STUD_ID: "send_student_id",
@@ -37,8 +38,9 @@ function connect() {
         statusElement.innerText = "Status: Connected. You can now speak.";
 
         // Send student ID as soon as socket is connected
-        student_id = document.getElementById("studentID").value;
-        const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_STUD_ID, student_id: student_id });
+        const studentID = studentIDText.value;
+        studentIDText.disabled = true;
+        const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_STUD_ID, student_id: studentID });
         socket.send(msg);
         console.log("Sent student ID:", studentID);
 
@@ -54,6 +56,7 @@ function connect() {
         pttButton.disabled = true;
         connectButton.disabled = false;
         disconnectButton.disabled = true;
+        studentIDText.disabled = false;
         statusElement.innerText = "Status: Disconnected";
         console.log("Connection closed. Please reconnect.");
     };
