@@ -43,7 +43,6 @@ function connect() {
         const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_STUD_ID, student_id: studentID });
         socket.send(msg);
         console.log("Sent student ID:", studentID);
-        
 
         // Send sample rate if it differs from default
         if (client_sample_rate !== defaultSampleRate) {
