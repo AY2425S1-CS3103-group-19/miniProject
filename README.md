@@ -80,12 +80,13 @@ Simply open the `index.html` file inside `client_basic` in a browser.
 ├── client_audio_worklet
 │   ├── index.html
 │   ├── client.js
-│   └── ...
+│   ├── styles.css
+│   └── audio-processor.js
 │
 ├── client_basic
 │   ├── index.html
 │   ├── client.js
-│   └── ...
+│   └── styles.css
 │
 ├── saved_audio
 │   ├── A0123456X
