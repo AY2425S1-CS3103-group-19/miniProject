@@ -61,6 +61,7 @@ python ./server/websocket_server.py -ip 127.0.0.1 --port 8765 -sa
 #### Client (**without** AudioWorklet API)
 > [!WARNING]
 > The function `createScriptProcessor` and `onaudioprocess` are deprecated. So this way might not always work.
+
 Simply open the `JSWebsocketClient.html` file inside `client` in a browser.
 
 #### Client (**with** AudioWorklet API)
