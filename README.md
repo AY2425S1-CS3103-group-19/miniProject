@@ -35,7 +35,7 @@ This project is a Push-to-Talk (PTT) button system that allows real-time audio c
 
 ### Usage
 ``` bash
-python ./server/websocket_server.py
+python ./server/audio_server.py
 ```
 
 #### Command line flags
@@ -46,7 +46,7 @@ python ./server/websocket_server.py
 
 Example:
 ``` bash
-python ./server/websocket_server.py -ip 127.0.0.1 --port 8765 -sa
+python ./server/audio_server.py -ip 127.0.0.1 --port 8765 -sa
 ```
 ---
 ## Client
@@ -62,7 +62,7 @@ python ./server/websocket_server.py -ip 127.0.0.1 --port 8765 -sa
 > [!WARNING]
 > The function `createScriptProcessor` and `onaudioprocess` are deprecated. So this way might not always work.
 
-Simply open the `JSWebsocketClient.html` file inside `client_basic` in a browser.
+Simply open the `index.html` file inside `client_basic` in a browser.
 
 #### Client (**with** AudioWorklet API)
 1. Open terminal to start a HTTP server
@@ -71,18 +71,20 @@ Simply open the `JSWebsocketClient.html` file inside `client_basic` in a browser
     ```
 2. Open the `html` file from `localhost`. E.g.
    ``` 
-    http://127.0.0.1/[directory_path]/client_audio_worklet/JSWebsocketClient.html
+    http://127.0.0.1/[directory_path]/client_audio_worklet/index.html
    ```
 
 ## Directory Structure
 ```
 .
 ├── client_audio_worklet
-│   ├── JSWebsocketClient.html
+│   ├── index.html
+│   ├── client.js
 │   └── ...
 │
 ├── client_basic
-│   ├── JSWebsocketClient.html
+│   ├── index.html
+│   ├── client.js
 │   └── ...
 │
 ├── saved_audio
@@ -94,7 +96,7 @@ Simply open the `JSWebsocketClient.html` file inside `client_basic` in a browser
 │          └── ...
 │   
 ├── server
-│   └── websocket_server.py
+│   └── audio_server.py
 │
 ├── requirements.txt
 └── README.md

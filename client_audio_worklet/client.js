@@ -1,4 +1,4 @@
-// JS WebSocket Client
+// JS WebSocket Client with Audio Worklet API
 
 const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
