@@ -1,4 +1,4 @@
-# Modified Python WebSocket Server to Save Audio Files
+# Python WebSocket Server
 
 import argparse
 import re
@@ -10,6 +10,7 @@ import numpy as np
 from scipy.signal import resample
 
 # Additional imports for file handling and timestamps
+import sys
 import os
 from datetime import datetime
 import wave
@@ -18,8 +19,6 @@ import wave
 """
 Handle each of the WebSocket connections
 """
-
-
 async def handle_client(websocket, path):
     global stream
 
@@ -50,8 +49,6 @@ async def handle_client(websocket, path):
 """
 Process all incoming messages from a client
 """
-
-
 async def process_client_messages(websocket, client_id):
     global active_speaker
 
@@ -66,7 +63,6 @@ async def process_client_messages(websocket, client_id):
                         wav_file.writeframes(message)
                     await play_audio(message, clients[client_id]['client_sample_rate'])
             else:
-                # print(f"Received message: {message}\n")
                 try:
                     # Parse JSON control messages
                     control_message = json.loads(message)
@@ -82,8 +78,6 @@ async def process_client_messages(websocket, client_id):
                         if not temp_id:
                             temp_id = "Unknown"
                         clients[client_id]['student_id'] = temp_id
-                        if temp_id not in student_ids:
-                            student_ids.append(temp_id)
                         print(f"Client {client_id}'s student id: {temp_id}")
 
                     elif control_message["type"] == "send_sample_rate":
@@ -107,8 +101,6 @@ async def process_client_messages(websocket, client_id):
 Play the received audio and perform necessary resampling 
 to match the default_sample_rate
 """
-
-
 async def play_audio(message, client_sample_rate):
     global default_sample_rate
 
@@ -126,8 +118,6 @@ async def play_audio(message, client_sample_rate):
 """
 Handle a client's request to speak.
 """
-
-
 async def handle_request_to_speaker(websocket, client_id):
     global active_speaker
 
@@ -138,66 +128,86 @@ async def handle_request_to_speaker(websocket, client_id):
             await websocket.send("speak_granted")
             print(f"Client {client_id} granted permission to speak")
 
-            # Open a new WAV file for recording
-            student_id = clients[client_id]['student_id']
-            if not student_id:
-                student_id = 'Unknown'
-            # Create directory if it doesn't exist
-            directory = "saved_audio/" + student_id
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            # Create filename with current time
-            now = datetime.now()
-            filename = now.strftime("%Hh_%Mm_%Ss_%d_%m_%Y.wav")
-            filepath = os.path.join(directory, filename)
-            # Open wave file for writing
-            wav_file = wave.open(filepath, 'wb')
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
-            wav_file.setframerate(clients[client_id]['client_sample_rate'])
-            clients[client_id]['wav_file'] = wav_file
-            print(f"Recording audio to {filepath}")
+            if save_audio:
+                await open_wav_file(client_id)
         else:
             await websocket.send("speak_denied")
             print(f"Client {client_id} denied from speaking")
 
 
 """
+Open a new WAV file for recording. 
+"""
+async def open_wav_file(client_id):
+    if client_id not in clients: 
+        return
+
+    student_id = clients[client_id]['student_id']
+    if not student_id:
+        student_id = 'Unknown'
+
+    # Home direct of the project
+    server_path = os.path.dirname(sys.argv[0])
+    home_dir = os.path.abspath(os.path.join(server_path, os.pardir))
+
+    # Create directory if it doesn't exist
+    local_path = "saved_audio/" + student_id
+    directory = home_dir + "/" + local_path
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    # Create filename with current time
+    now = datetime.now()
+    filename = now.strftime("%Hh_%Mm_%Ss_%d_%m_%Y.wav")
+    filepath = os.path.join(directory, filename)
+
+    # Open wave file for writing
+    wav_file = wave.open(filepath, 'wb')
+    wav_file.setnchannels(1)
+    wav_file.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
+    wav_file.setframerate(clients[client_id]['client_sample_rate'])
+
+    clients[client_id]['wav_file'] = wav_file
+    print(f"Recording audio to {local_path + '/' + filename}")
+
+
+"""
+Close WAV file
+"""
+async def close_wav_file(client_id):
+    if client_id not in clients: 
+            return
+
+    wav_file = clients[client_id].get('wav_file')
+    if wav_file:
+        wav_file.close()
+        clients[client_id]['wav_file'] = None
+        print(f"Closed WAV file for client {client_id}")
+
+
+"""
 Handle the release of the speaker from the client
 """
-
-
 async def handle_release_speaker(client_id):
     global active_speaker
 
     async with lock:
         if active_speaker == client_id:
-            # Close WAV file
-            wav_file = clients[client_id].get('wav_file')
-            if wav_file:
-                wav_file.close()
-                clients[client_id]['wav_file'] = None
-                print(f"Closed WAV file for client {client_id}")
             active_speaker = None
             print(f"Client {client_id} released the speaker")
+
+            await close_wav_file(client_id)
             await notify_all_clients()
 
 
 """
 Remove a client from the connected clients list
 """
-
-
 async def remove_client(client_id):
     global active_speaker
-
-    # Close WAV file if open
-    wav_file = clients[client_id].get('wav_file')
-    if wav_file:
-        wav_file.close()
-        clients[client_id]['wav_file'] = None
-        print(f"Closed WAV file for client {client_id} on disconnect")
+    
     if client_id in clients:
+        await close_wav_file(client_id)
         del clients[client_id]
 
     print(f"Client {client_id} removed")
@@ -209,8 +219,6 @@ async def remove_client(client_id):
 """
 Send a message to all connected clients to tell them the speaker is available
 """
-
-
 async def notify_all_clients():
     clients_copy = clients.copy()
     for (client_id, client_info) in clients_copy.items():
@@ -218,7 +226,7 @@ async def notify_all_clients():
         try:
             await websocket.send("speak_released")
         except websockets.exceptions.ConnectionClosed:
-            # The client has closed the connection so can remove it
+            # The client has closed the connection, so it can be removed
             await remove_client(client_id)
 
     print(f"Notified all clients that speaker is available")
@@ -227,8 +235,6 @@ async def notify_all_clients():
 """
 Validate IPv4 address
 """
-
-
 def validate_ip(ip):
     # Allow 'localhost' as a valid IP equivalent
     if ip == "localhost":
@@ -250,8 +256,6 @@ def validate_ip(ip):
 """
 Validate port number
 """
-
-
 def validate_port(port):
     port = int(port)
     if port < 1 or port > 65535:
@@ -263,8 +267,6 @@ def validate_port(port):
 """
 Parse for command line flags
 """
-
-
 def parse_flags():
     parser = argparse.ArgumentParser()
 
@@ -305,9 +307,9 @@ try:
 
     print(
         f"Server started on:\n"
-        f"  IP Address : {args.ip_address}\n"
-        f"  Port       : {args.port}\n"
-        f"Audio saving is {'enabled' if args.save_audio else 'disabled'}."
+        f"  IP Address : {ip}\n"
+        f"  Port       : {port}\n"
+        f"Audio saving is {'enabled' if save_audio else 'disabled'}."
     )
     print("To terminate the program press: Ctrl+C\n")
 
