@@ -16,13 +16,14 @@ Supported browser:
   - [x] Google Chrome
   - [x] Microsoft Edge
   - [x] Mozilla Firefox
+  - [x] Apple Safari
 
 <br>
 
 #### Client (**without** AudioWorklet API)
-Simply Open the `html` file in a browser.
 > [!WARNING]
-> The function `createScriptProcessor` and `onaudioprocess` are deprecated.
+> The function `createScriptProcessor` and `onaudioprocess` are deprecated. So this way might not always work.
+Simply Open the `html` file in a browser.
 
 <br>
 

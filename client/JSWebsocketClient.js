@@ -10,6 +10,7 @@ let isAllowedToSpeak = false;
 let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
 const MESSAGE_TYPES = {
+    SEND_STUD_ID: "send_student_id",
     REQUEST_SPEAKER: "request_speaker",
     RELEASE_SPEAKER: "release_speaker",
     SEND_SAMPLE_RATE: "send_sample_rate",
@@ -36,8 +37,8 @@ function connect() {
         statusElement.innerText = "Status: Connected. You can now speak.";
 
         // Send student ID as soon as socket is connected
-        let studentID = document.getElementById("studentID").value;
-        const msg = JSON.stringify({ type: "student_id", student_id: studentID });
+        const studentID = document.getElementById("studentID").value;
+        const msg = JSON.stringify({ type: MESSAGE_TYPES.SEND_STUD_ID, student_id: studentID });
         socket.send(msg);
         console.log("Sent student ID:", studentID);
 
