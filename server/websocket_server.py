@@ -14,7 +14,6 @@ import os
 from datetime import datetime
 import wave
 
-student_ids = []
 
 """
 Handle each of the WebSocket connections
