@@ -176,7 +176,7 @@ Close WAV file
 """
 async def close_wav_file(client_id):
     if client_id not in clients: 
-            return
+        return
 
     wav_file = clients[client_id].get('wav_file')
     if wav_file:
