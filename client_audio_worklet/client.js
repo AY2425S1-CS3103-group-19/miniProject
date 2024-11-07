@@ -1,4 +1,4 @@
-// JS WebSocket Client
+// JS WebSocket Client with Audio Worklet API
 
 const defaultSampleRate = 48000;
 const statusElement = document.getElementById("status");
@@ -10,6 +10,7 @@ const studentIDText = document.getElementById("studentID");
 let isAllowedToSpeak = false;
 let socket, audioContext, mediaStream, audioProcessor, client_sample_rate;
 
+
 const MESSAGE_TYPES = {
     SEND_STUD_ID: "send_student_id",
     REQUEST_SPEAKER: "request_speaker",
@@ -20,6 +21,7 @@ const MESSAGE_TYPES = {
     SPEAK_DENIED: "speak_denied",
     SPEAK_RELEASED: "speak_released"
 };
+
 
 function connect() {
     // Disable button once it's pressed to prevent spamming

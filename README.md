@@ -6,9 +6,9 @@ This project is a Push-to-Talk (PTT) button system that allows real-time audio c
 
 ## Prerequisites
 - Python 3.x
-- Modern web browser with WebSocket and Audio API support
+- Modern web browser with WebSocket and Audio Worklet API support
 
-### Supported browsers
+#### Supported browsers
   - [x] Google Chrome
   - [x] Microsoft Edge
   - [x] Mozilla Firefox
@@ -35,7 +35,7 @@ This project is a Push-to-Talk (PTT) button system that allows real-time audio c
 
 ### Usage
 ``` bash
-python ./server/websocket_server.py
+python ./server/audio_server.py
 ```
 
 #### Command line flags
@@ -46,7 +46,7 @@ python ./server/websocket_server.py
 
 Example:
 ``` bash
-python ./server/websocket_server.py -ip 127.0.0.1 --port 8765 -sa
+python ./server/audio_server.py -ip 127.0.0.1 --port 8765 -sa
 ```
 ---
 ## Client
@@ -62,7 +62,7 @@ python ./server/websocket_server.py -ip 127.0.0.1 --port 8765 -sa
 > [!WARNING]
 > The function `createScriptProcessor` and `onaudioprocess` are deprecated. So this way might not always work.
 
-Simply open the `JSWebsocketClient.html` file inside `client` in a browser.
+Simply open the `index.html` file inside `client_basic` in a browser.
 
 #### Client (**with** AudioWorklet API)
 1. Open terminal to start a HTTP server
@@ -71,19 +71,22 @@ Simply open the `JSWebsocketClient.html` file inside `client` in a browser.
     ```
 2. Open the `html` file from `localhost`. E.g.
    ``` 
-    http://127.0.0.1/[directory_path]/clientWithAudioProcessor/JSWebsocketClient.html
+    http://127.0.0.1/[directory_path]/client_audio_worklet/index.html
    ```
 
 ## Directory Structure
 ```
 .
-├── client
-│   ├── JSWebsocketClient.html
-│   └── ...
+├── client_audio_worklet
+│   ├── index.html
+│   ├── client.js
+│   ├── styles.css
+│   └── audio-processor.js
 │
-├── clientWithAudioProcessor
-│   ├── JSWebsocketClient.html
-│   └── ...
+├── client_basic
+│   ├── index.html
+│   ├── client.js
+│   └── styles.css
 │
 ├── saved_audio
 │   ├── A0123456X
@@ -94,7 +97,7 @@ Simply open the `JSWebsocketClient.html` file inside `client` in a browser.
 │          └── ...
 │   
 ├── server
-│   └── websocket_server.py
+│   └── audio_server.py
 │
 ├── requirements.txt
 └── README.md
